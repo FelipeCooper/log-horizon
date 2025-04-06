@@ -1,0 +1,44 @@
+version: '3.8'
+
+services:
+  mongo:
+    image: mongo:latest
+    container_name: loghorizon-mongo
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: example
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+    networks:
+      - loghorizon-network
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: loghorizon-app
+    environment:
+      MONGODB_URI: mongodb://root:example@mongo:27017/admin
+      MONGODB_DBNAME: loghorizon
+      MONGODB_COLLECTION: logs
+      EXPORT_PATH: /app/exports
+      GRPC_PORT: 50051
+    ports:
+      - "50051:50051"
+    depends_on:
+      - mongo
+    networks:
+      - loghorizon-network
+    volumes:
+      - export-data:/app/exports
+    restart: on-failure
+
+networks:
+  loghorizon-network:
+    driver: bridge
+
+volumes:
+  mongo-data:
+  export-data: 

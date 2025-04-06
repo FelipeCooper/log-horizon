@@ -1,0 +1,68 @@
+syntax = "proto3";
+
+package logs;
+option go_package = "app/sdk/proto/mlog";
+
+// Mensagem para registrar um novo log
+message NewLog {
+  string message = 1;
+  string level = 2;
+  int64 timestamp = 3;
+  map<string, string> metadata = 4;
+}
+
+// Resposta ao registrar um log
+message LogResponse {
+  string id = 1;
+  string status = 2;
+}
+
+// Mensagem com os logs retornados
+message Log {
+  string id = 1;
+  string message = 2;
+  string level = 3;
+  int64 timestamp = 4;
+  map<string, string> metadata = 5;
+}
+
+// Coleção de logs
+message Logs {
+  repeated Log logs = 1;
+  int32 total = 2;
+  bool has_more = 3;
+}
+
+// Consulta para buscar logs
+message SearchQuery {
+  int64 start_time = 1;
+  int64 end_time = 2;
+  string level = 3;
+  int32 page_size = 4;
+  int32 page = 5;
+  bool as_file = 6; // Se true, retorna como arquivo ao invés de stream
+}
+
+// Resposta quando os logs são retornados como arquivo
+message FileResponse {
+  string file_url = 1;
+  int64 file_size = 2;
+  string compression = 3; // Tipo de compressão utilizada
+}
+
+// Serviço para registrar logs
+service LogWriter {
+  rpc Register(NewLog) returns (LogResponse);
+}
+
+// Serviço para buscar logs
+service LogReader {
+  // Busca logs retornando como stream de registros
+  rpc Search(SearchQuery) returns (Logs);
+  
+  // Busca logs retornando como arquivo
+  rpc ExportToFile(SearchQuery) returns (FileResponse);
+  
+  // Busca logs retornando como stream de chunks (para arquivos grandes)
+  rpc StreamFile(SearchQuery) returns (stream Logs);
+} 
