@@ -102,6 +102,7 @@ This will start both the MongoDB and Log Horizon application containers.
 ### Local Setup
 
 1. Install MongoDB:
+
    ```bash
    # Ubuntu
    sudo apt-get install mongodb
@@ -111,6 +112,7 @@ This will start both the MongoDB and Log Horizon application containers.
    ```
 
 2. Start MongoDB:
+
    ```bash
    # Ubuntu
    sudo systemctl start mongodb
@@ -120,6 +122,7 @@ This will start both the MongoDB and Log Horizon application containers.
    ```
 
 3. Create a user (optional but recommended):
+
    ```bash
    mongosh
    > use admin
@@ -154,6 +157,8 @@ mongo:
 ```
 
 ## API Usage
+
+For detailed API documentation, see [API.md](docs/API.md).
 
 ### Using the Client
 
@@ -197,11 +202,19 @@ func main() {
 	}
 	defer conn.Close()
 
-	// Create clients for log writing and reading
-	writerClient := protomlog.NewLogWriterClient(conn)
-	readerClient := protomlog.NewLogReaderClient(conn)
+client := protomlog.NewLogWriterClient(conn)
 
-	// Use the clients...
+    // Register a log
+    resp, err := client.Register(context.Background(), &protomlog.NewLog{
+        Message:   "Test log message",
+        Level:     "info",
+        Timestamp: time.Now().Unix(),
+        Metadata:  map[string]string{"service": "example-service"},
+    })
+    if err != nil {
+        log.Fatalf("Failed to register log: %v", err)
+    }
+    log.Printf("Log registered with ID: %s", resp.Id)
 }
 ```
 
@@ -251,12 +264,12 @@ log.Printf("Found %d logs (total: %d, has more: %v)", len(logs.Logs), logs.Total
 
 // Process the logs
 for i, log := range logs.Logs {
-	log.Printf("%d. [%s] %s (ID: %s)", 
-		i+1, 
+	log.Printf("%d. [%s] %s (ID: %s)",
+		i+1,
 		time.Unix(log.Timestamp, 0).Format(time.RFC3339),
 		log.Message,
 		log.Id)
-	
+
 	// Print metadata if available
 	if len(log.Metadata) > 0 {
 		log.Println("   Metadata:")
@@ -316,7 +329,7 @@ for {
 
 	// Process this batch of logs
 	log.Printf("Received batch with %d logs", len(batch.Logs))
-	
+
 	// ... process logs ...
 }
 ```
@@ -326,10 +339,12 @@ for {
 ### Common Issues
 
 1. **Connection Refused**
+
    - Make sure the server is running and listening on the expected port
    - Check if there's a firewall blocking the connection
 
 2. **Authentication Failed**
+
    - Verify MongoDB credentials in environment variables
    - Check that the MongoDB URI includes the authentication database (e.g., `/admin`)
 
@@ -352,10 +367,89 @@ grpcurl -plaintext localhost:50051 list logs.LogReader
 grpcurl -plaintext -d '{"start_time": 0, "end_time": 9999999999, "page_size": 10}' localhost:50051 logs.LogReader/Search
 ```
 
+#Error Codes
+
+Error Codes
+The gRPC API uses standard gRPC error codes to indicate the status of operations. Below is a list of common error codes and their meanings:
+
+Error Code Description
+
+INVALID_ARGUMENT: The client provided invalid input, such as an unrecognized log level or invalid time range.
+
+NOT_FOUND: The requested resource (e.g., log entry) was not found.
+ALREADY_EXISTS The resource being created already exists.
+
+PERMISSION_DENIED: The client does not have permission to perform the operation.
+
+UNAUTHENTICATED: Authentication failed or was not provided.
+
+RESOURCE_EXHAUSTED: The server has exhausted its resources (e.g., rate limits or storage).
+
+INTERNAL: An internal server error occurred.
+
+UNAVAILABLE: The service is currently unavailable (e.g., due to maintenance or overload).
+
+DEADLINE_EXCEEDED: The operation took too long to complete and timed out.
+
+##Service-Specific Errors
+
+###LogWriter Service
+
+Error Code: Scenario
+INVALID_ARGUMENT: Log level is invalid or metadata is malformed.
+INTERNAL: Failed to register the log due to a server-side issue.
+
+###LogReader Service
+Error Code: Scenario
+INVALID_ARGUMENT: Time range is invalid or page size exceeds the limit.
+NOT_FOUND: No logs found for the given query.
+INTERNAL: Failed to retrieve logs due to a server-side issue.
+
+###ExportToFile
+Error Code: Scenario
+INVALID_ARGUMENT: Time range or log level is invalid.
+INTERNAL: Failed to export logs to a file due to a server-side issue.
+
+###StreamFile
+Error Code: Scenario
+INVALID_ARGUMENT: Time range or log level is invalid.
+INTERNAL: Failed to stream logs due to a server-side issue.
+UNAVAILABLE: Streaming was interrupted due to server unavailability.
+
+##How to Handle Errors
+Check the Error Code: Use the error code to determine the type of issue.
+Retry on Transient Errors: For errors like UNAVAILABLE or DEADLINE_EXCEEDED, implement retry logic with exponential backoff.
+Fix Client-Side Issues: For errors like INVALID_ARGUMENT, ensure the request parameters are valid.
+Contact Support: For persistent INTERNAL errors, contact the API support team.
+
+## Quick-Start Guide
+
+Provide a simple guide to help new clients integrate quickly.
+
+Example:
+Install Dependencies:
+
+go get google.golang.org/grpc
+go get google.golang.org/protobuf
+
+Generate Protobuf Files:
+
+protoc --go_out=. --go-grpc_out=. app/sdk/proto/mlog/logs.proto
+
+Connect to the API:
+
+conn, err := grpc.Dial("localhost:50051", grpc.WithTransportCredentials(insecure.NewCredentials()))
+
+Use the API:
+
+client := protomlog.NewLogWriterClient(conn)
+
+By implementing these suggestions, you can make your API more accessible and easier to integrate for new clients.
+
 ## Contributing
 
 Contributions are welcome! Please read the contribution guidelines before submitting a pull request.
 
 ## License
 
-This project is licensed under the [MIT License](LICENSE). 
+This project is licensed under the [MIT License](LICENSE).
