@@ -367,7 +367,7 @@ grpcurl -plaintext localhost:50051 list logs.LogReader
 grpcurl -plaintext -d '{"start_time": 0, "end_time": 9999999999, "page_size": 10}' localhost:50051 logs.LogReader/Search
 ```
 
-#Error Codes
+# Error Codes
 
 Error Codes
 The gRPC API uses standard gRPC error codes to indicate the status of operations. Below is a list of common error codes and their meanings:
@@ -391,58 +391,75 @@ UNAVAILABLE: The service is currently unavailable (e.g., due to maintenance or o
 
 DEADLINE_EXCEEDED: The operation took too long to complete and timed out.
 
-##Service-Specific Errors
+## Service-Specific Errors
 
-###LogWriter Service
+### LogWriter Service
 
 Error Code: Scenario
 INVALID_ARGUMENT: Log level is invalid or metadata is malformed.
 INTERNAL: Failed to register the log due to a server-side issue.
 
-###LogReader Service
+### LogReader Service
+
 Error Code: Scenario
 INVALID_ARGUMENT: Time range is invalid or page size exceeds the limit.
 NOT_FOUND: No logs found for the given query.
 INTERNAL: Failed to retrieve logs due to a server-side issue.
 
-###ExportToFile
+### ExportToFile
+
 Error Code: Scenario
 INVALID_ARGUMENT: Time range or log level is invalid.
 INTERNAL: Failed to export logs to a file due to a server-side issue.
 
-###StreamFile
+### StreamFile
+
 Error Code: Scenario
 INVALID_ARGUMENT: Time range or log level is invalid.
 INTERNAL: Failed to stream logs due to a server-side issue.
 UNAVAILABLE: Streaming was interrupted due to server unavailability.
 
-##How to Handle Errors
+## How to Handle Errors
+
 Check the Error Code: Use the error code to determine the type of issue.
 Retry on Transient Errors: For errors like UNAVAILABLE or DEADLINE_EXCEEDED, implement retry logic with exponential backoff.
 Fix Client-Side Issues: For errors like INVALID_ARGUMENT, ensure the request parameters are valid.
 Contact Support: For persistent INTERNAL errors, contact the API support team.
 
-## Quick-Start Guide
+### Quick-Start Guide
 
 Provide a simple guide to help new clients integrate quickly.
 
 Example:
 Install Dependencies:
 
-go get google.golang.org/grpc
-go get google.golang.org/protobuf
+```go
+	go get google.golang.org/grpc
+	go get google.golang.org/protobuf
+```
 
 Generate Protobuf Files:
 
+```go
+
 protoc --go_out=. --go-grpc_out=. app/sdk/proto/mlog/logs.proto
+
+```
 
 Connect to the API:
 
+```go
 conn, err := grpc.Dial("localhost:50051", grpc.WithTransportCredentials(insecure.NewCredentials()))
+
+```
 
 Use the API:
 
+```go
+
 client := protomlog.NewLogWriterClient(conn)
+
+```
 
 By implementing these suggestions, you can make your API more accessible and easier to integrate for new clients.
 
